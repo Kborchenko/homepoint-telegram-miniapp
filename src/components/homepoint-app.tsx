@@ -81,6 +81,15 @@ function formatMoscow(date: Date) {
   }).format(date);
 }
 
+function pluralRu(value: number, one: string, few: string, many: string) {
+  const mod100 = value % 100;
+  const mod10 = value % 10;
+  if (mod100 >= 11 && mod100 <= 19) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
 function moscowParts(date: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: MOSCOW_TIME_ZONE,
@@ -221,6 +230,10 @@ function TestScreen({ state, now, update, startTest }: { state: PersistedAppStat
   const [quizBlock, setQuizBlock] = useState<number | null>(null);
   const [blockResult, setBlockResult] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (blockResult) window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [blockResult]);
+
   if (state.assessment.status === "idle") return <section className="test-intro"><div className="test-intro__mark"><Clock3 /></div><Eyebrow>Первичный отбор</Eyebrow><h1>Таймер не запущен</h1><p>Отсчёт 24 часов начнётся только после нажатия кнопки. После запуска пройди шесть учебных блоков и итоговое тестирование.</p><div className="rules-card"><div><span>01</span><p><b>6 блоков с материалом</b><small>В каждом — теория и 5 проверочных вопросов.</small></p></div><div><span>02</span><p><b>Итоговый тест</b><small>12 ситуационных вопросов по всем темам.</small></p></div><div><span>03</span><p><b>24 часа без пауз</b><small>Таймер продолжает идти после закрытия приложения.</small></p></div></div><PrimaryButton onClick={startTest}>Запустить 24 часа</PrimaryButton></section>;
 
   if (state.assessment.status === "expired") return <section className="result-card result-card--expired"><Clock3 /><Eyebrow>Время вышло</Eyebrow><h1>Первичный отбор закрыт</h1><p>Результат зафиксирован. Для повторного доступа свяжись с менеджером.</p></section>;
@@ -246,7 +259,7 @@ function TestScreen({ state, now, update, startTest }: { state: PersistedAppStat
   if (blockResult) {
     const block = assessmentBlocks[blockResult - 1];
     const correct = block.questions.filter((item) => Number(state.assessment.answers[item.id]) === item.correct).length;
-    return <section className="block-result"><button type="button" className="back-button" onClick={() => setBlockResult(null)}><ArrowLeft /> К программе</button><div className="block-result__score"><small>Результат блока {block.id}</small><strong>{correct}<span>/5</span></strong><p>{correct >= 4 ? "Материал усвоен. Следующий блок открыт." : "Блок завершён. Перед итоговым тестом вернись к ошибкам и повтори материал."}</p></div><div className="answer-review">{block.questions.map((item, index) => { const right = Number(state.assessment.answers[item.id]) === item.correct; return <article key={item.id} className={right ? "is-right" : "is-wrong"}><span>{right ? <Check /> : <X />}</span><div><small>Вопрос {index + 1}</small><b>{item.question}</b>{!right ? <p>Правильный ответ: {item.options[item.correct]}</p> : null}<em>{item.explanation}</em></div></article>; })}</div><PrimaryButton onClick={() => setBlockResult(null)}>Вернуться к блокам</PrimaryButton></section>;
+    return <section className="block-result"><button type="button" className="back-button" onClick={() => setBlockResult(null)}><ArrowLeft /> К программе</button><div className="block-result__hero"><div className="block-result__copy"><Eyebrow>Блок {block.id} завершён</Eyebrow><h1>{block.title}</h1><p>{correct >= 4 ? "Материал усвоен — следующий блок уже открыт." : "Блок завершён. Перед итоговым тестом стоит повторить ошибки."}</p></div><div className="block-result__score" aria-label={`Результат ${correct} из 5`}><strong>{correct}</strong><span>из 5</span></div></div><div className="block-result__summary"><span><CheckCircle2 />{correct} правильных</span><span>{5 - correct} требуют повторения</span></div><div className="answer-review"><div className="answer-review__heading"><Eyebrow>Разбор результата</Eyebrow><h2>Все ответы по порядку</h2></div>{block.questions.map((item, index) => { const right = Number(state.assessment.answers[item.id]) === item.correct; return <article key={item.id} className={right ? "is-right" : "is-wrong"}><span className="answer-review__status">{right ? <Check /> : <X />}</span><div><small>Вопрос {String(index + 1).padStart(2, "0")} · {right ? "Верно" : "Ошибка"}</small><h3>{item.question}</h3>{!right ? <p><b>Правильный ответ</b>{item.options[item.correct]}</p> : null}<em>{item.explanation}</em></div></article>; })}</div><PrimaryButton onClick={() => setBlockResult(null)}>Вернуться к блокам</PrimaryButton></section>;
   }
 
   if (quizBlock) {
@@ -327,7 +340,15 @@ function LibraryScreen() {
   const [filter, setFilter] = useState<"Все" | CatalogItem["category"]>("Все");
   const [opened, setOpened] = useState<CatalogItem | null>(null);
   const items = filter === "Все" ? catalogItems : catalogItems.filter((item) => item.category === filter);
-  if (opened) return <section className="catalog-detail"><button type="button" className="back-button" onClick={() => setOpened(null)}><ArrowLeft /> Каталог</button>{opened.image ? <Image className="catalog-detail__image" src={`${APP_BASE_PATH}${opened.image}`} alt={`Товарный референс: ${opened.title}`} width={1536} height={1024} sizes="(max-width: 700px) 100vw, 520px" /> : null}<div className={`catalog-cover reference-card--${opened.tone}`}><small>{opened.category} · {opened.meta}</small><h1>{opened.title}</h1><p>{opened.summary}</p></div>{opened.sections.map((section) => <article key={section.title}><h2>{section.title}</h2><p>{section.body}</p><ul>{section.bullets.map((bullet) => <li key={bullet}><Check />{bullet}</li>)}</ul></article>)}</section>;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [opened]);
+
+  if (opened) {
+    const bulletCount = opened.sections.reduce((sum, section) => sum + section.bullets.length, 0);
+    return <section className="catalog-detail"><button type="button" className="back-button" onClick={() => setOpened(null)}><ArrowLeft /> Каталог</button>{opened.image ? <Image className="catalog-detail__image" src={`${APP_BASE_PATH}${opened.image}`} alt={`Товарный референс: ${opened.title}`} width={1536} height={1024} sizes="(max-width: 700px) 100vw, 520px" /> : null}<div className={`catalog-cover reference-card--${opened.tone}`}><small>{opened.category} · {opened.meta}</small><h1>{opened.title}</h1><p>{opened.summary}</p><div className="catalog-cover__stats"><span><b>{opened.sections.length}</b> {pluralRu(opened.sections.length, "раздел", "раздела", "разделов")}</span><span><b>{bulletCount}</b> {pluralRu(bulletCount, "рабочий пункт", "рабочих пункта", "рабочих пунктов")}</span></div></div><div className="catalog-detail__intro"><Eyebrow>Материал внутри</Eyebrow><h2>Рабочая карточка</h2><p>Открой нужный раздел и используй формулировки как опору в консультации.</p></div><div className="catalog-detail__sections">{opened.sections.map((section, index) => <article key={section.title}><header><span>{String(index + 1).padStart(2, "0")}</span><h2>{section.title}</h2></header><p>{section.body}</p><ul>{section.bullets.map((bullet) => <li key={bullet}><Check />{bullet}</li>)}</ul></article>)}</div><button type="button" className="catalog-back-card" onClick={() => setOpened(null)}><ArrowLeft /><span><b>Вернуться в каталог</b><small>Выбрать другой материал</small></span></button></section>;
+  }
   return <><section className="catalog-feature"><Image src={`${APP_BASE_PATH}/references/modular-sofa.png`} alt="Светлый модульный диван в интерьере" width={1536} height={1024} priority sizes="(max-width: 700px) 100vw, 520px" /><div><Eyebrow>Каталог HOMEPOINT</Eyebrow><h1>Мебель в деталях</h1><p>Товарные референсы, характеристики и готовые аргументы для консультации.</p></div></section><div className="filter-row">{(["Все", "Референсы", "Товары", "Скрипты", "Регламенты"] as const).map((item) => <button type="button" key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><section className="reference-grid">{items.map((item, index) => <button type="button" key={item.id} onClick={() => setOpened(item)} className={`reference-card reference-card--${item.tone} ${item.image ? "reference-card--visual" : ""}`}>{item.image ? <Image src={`${APP_BASE_PATH}${item.image}`} alt="" aria-hidden="true" width={1536} height={1024} sizes="(max-width: 700px) 100vw, 260px" /> : null}<span className="reference-card__index">{String(index + 1).padStart(2, "0")}</span><span><small>{item.category}</small><b>{item.title}</b><em>{item.meta}</em></span><ArrowRight /></button>)}</section></>;
 }
 
