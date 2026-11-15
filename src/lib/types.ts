@@ -13,7 +13,17 @@ export type AssessmentState = {
   startedAt?: string;
   expiresAt?: string;
   answers: Record<string, string>;
+  completedBlocks: number[];
+  finalStarted?: boolean;
+  completedAt?: string;
   score?: number;
+};
+
+export type DayProgress = {
+  quizAnswers: Record<string, string>;
+  quizScore?: number;
+  simulationStep: number;
+  simulationScore: number;
 };
 
 export type AcademyState = {
@@ -22,6 +32,7 @@ export type AcademyState = {
   completedDays: number[];
   activeDay: number;
   lastCompletedAt?: string;
+  dayProgress: Record<string, DayProgress>;
 };
 
 export type PersistedAppState = {

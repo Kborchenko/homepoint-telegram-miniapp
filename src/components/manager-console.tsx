@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Clock3, Search, ShieldCheck, UserRound, X } from "lucide-react";
 import type { PersistedAppState } from "@/lib/types";
 
-const STORAGE_KEY = "homepoint:candidate:v1";
+const STORAGE_KEY = "homepoint:candidate:v2";
 
 const fallback: PersistedAppState = {
-  assessment: { status: "completed", answers: {}, score: 80 },
-  academy: { access: "pending", completedDays: [], activeDay: 1 },
+  assessment: { status: "completed", answers: {}, completedBlocks: [1, 2, 3, 4, 5, 6], score: 80 },
+  academy: { access: "pending", completedDays: [], activeDay: 1, dayProgress: {} },
 };
 
 export default function ManagerConsole() {
