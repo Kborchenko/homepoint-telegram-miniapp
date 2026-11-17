@@ -32,6 +32,7 @@ import {
   type TrainingDay,
 } from "@/lib/content";
 import { initTelegram } from "@/lib/telegram";
+import { completePrimaryAssessment, readPrimaryAssessment, startPrimaryAssessment, type ServerAssessment } from "@/lib/assessment-api";
 import type { AppSection, CandidateProfile, DayProgress, PersistedAppState } from "@/lib/types";
 
 const STORAGE_KEY = "homepoint:candidate:v2";
@@ -57,6 +58,23 @@ function readState(): PersistedAppState {
   } catch {
     return defaultState;
   }
+}
+
+function mergeServerAssessment(current: PersistedAppState, server: ServerAssessment): PersistedAppState {
+  if (server.attempt === 0) return current;
+  const changedAttempt = server.attempt > (current.assessment.serverAttempt ?? 0);
+  const cleared = changedAttempt ? { answers: {}, completedBlocks: [], finalStarted: false, score: undefined } : current.assessment;
+  return {
+    ...current,
+    assessment: {
+      ...cleared,
+      status: server.status,
+      serverAttempt: server.attempt,
+      startedAt: server.startedAt ?? undefined,
+      expiresAt: server.expiresAt ?? undefined,
+      completedAt: server.completedAt ?? (changedAttempt ? undefined : current.assessment.completedAt),
+    },
+  };
 }
 
 function initials(profile: CandidateProfile) {
@@ -252,6 +270,7 @@ function TestScreen({ state, now, update, startTest }: { state: PersistedAppStat
       const allQuestions = [...assessmentBlocks.flatMap((block) => block.questions), ...finalAssessmentQuestions];
       const score = Math.round((allQuestions.filter((question) => Number(nextAnswers[question.id]) === question.correct).length / allQuestions.length) * 100);
       update({ ...state, assessment: { ...state.assessment, answers: nextAnswers, status: "completed", score, completedAt: new Date().toISOString() } });
+      void completePrimaryAssessment().catch(() => undefined);
     };
     return <><CountdownCard state={state} now={now} /><div className="final-test-banner"><ListChecks /><span><b>Итоговое тестирование</b><small>12 вопросов · изменить ответы нельзя</small></span></div><QuestionFlow questions={finalAssessmentQuestions} answers={finalAnswers} onAnswer={answerFinal} label="Финал" /></>;
   }
@@ -390,7 +409,18 @@ export default function HomepointApp() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => { setProfile(initTelegram()); setNow(new Date()); setState(readState()); setHydrated(true); });
+    const frame = window.requestAnimationFrame(() => {
+      setProfile(initTelegram()); setNow(new Date());
+      const local = readState(); setState(local); setHydrated(true);
+      void readPrimaryAssessment().then((server) => {
+        if (!server) return;
+        setState((current) => {
+          const merged = mergeServerAssessment(current, server);
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          return merged;
+        });
+      }).catch(() => undefined);
+    });
     const timer = window.setInterval(() => {
       const currentTime = new Date(); setNow(currentTime);
       setState((current) => {
@@ -399,13 +429,37 @@ export default function HomepointApp() {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(expired)); return expired;
       });
     }, 1000);
-    const sync = () => setState(readState()); window.addEventListener("storage", sync); window.addEventListener("focus", sync);
+    const sync = () => {
+      setState(readState());
+      void readPrimaryAssessment().then((server) => {
+        if (!server) return;
+        setState((current) => {
+          const merged = mergeServerAssessment(current, server);
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          return merged;
+        });
+      }).catch(() => undefined);
+    };
+    window.addEventListener("storage", sync); window.addEventListener("focus", sync);
     return () => { window.cancelAnimationFrame(frame); window.clearInterval(timer); window.removeEventListener("storage", sync); window.removeEventListener("focus", sync); };
   }, []);
 
   const update = (next: PersistedAppState) => { setState(next); window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); };
-  const startTest = () => {
+  const startTest = async () => {
     if (state.assessment.status !== "idle") { setSection("test"); return; }
+    try {
+      const server = await startPrimaryAssessment();
+      if (server) {
+        update(mergeServerAssessment(state, server));
+        setSection("test");
+        return;
+      }
+    } catch {
+      const server = await readPrimaryAssessment().catch(() => null);
+      if (server) update(mergeServerAssessment(state, server));
+      setSection("test");
+      return;
+    }
     const startedAt = new Date();
     update({ ...state, assessment: { status: "active", startedAt: startedAt.toISOString(), expiresAt: new Date(startedAt.getTime() + DAY).toISOString(), answers: {}, completedBlocks: [] } });
     setSection("test");

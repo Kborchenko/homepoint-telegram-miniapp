@@ -10,6 +10,7 @@ export type CandidateProfile = {
 
 export type AssessmentState = {
   status: "idle" | "active" | "completed" | "expired";
+  serverAttempt?: number;
   startedAt?: string;
   expiresAt?: string;
   answers: Record<string, string>;
