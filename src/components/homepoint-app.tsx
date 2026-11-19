@@ -169,6 +169,10 @@ function BottomNav({ active, onChange }: { active: AppSection; onChange: (sectio
 
 function Eyebrow({ children }: { children: React.ReactNode }) { return <p className="eyebrow">{children}</p>; }
 
+function ManagerContact() {
+  return <a className="manager-link" href="https://t.me/dmitrievvvaaa" target="_blank" rel="noopener noreferrer"><MessageCircleMore /><span><b>По всем вопросам — Екатерина</b><small>@dmitrievvvaaa · написать менеджеру</small></span></a>;
+}
+
 function PrimaryButton({ children, onClick, disabled = false, tone = "green" }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; tone?: "green" | "cream" }) {
   return <button type="button" className={`primary-button primary-button--${tone}`} onClick={onClick} disabled={disabled}><span>{children}</span><ArrowRight aria-hidden="true" /></button>;
 }
@@ -205,6 +209,7 @@ function HomeScreen({ profile, state, now, go, startTest }: { profile: Candidate
       <button type="button" className="feature-banner" onClick={() => go("library")}>
         <div className="feature-banner__icon"><BookOpen /></div><div><Eyebrow>Рабочие материалы</Eyebrow><h3>Каталог Свой угол</h3><p>Товары, скрипты и регламенты с подробными карточками.</p></div><ChevronRight />
       </button>
+      <ManagerContact />
       <section className="welcome-strip"><Avatar profile={profile} /><div><b>{profile.firstName}, профиль подключён</b><span>Прогресс привязан к Telegram-аккаунту</span></div><ShieldCheck /></section>
     </>
   );
