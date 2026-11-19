@@ -3,9 +3,9 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HOMEPOINT — Академия координатора",
-  description: "Первичное тестирование и обучение кандидатов HOMEPOINT",
-  applicationName: "HOMEPOINT Academy",
+  title: "Свой угол — Академия координатора",
+  description: "Первичное тестирование и обучение кандидатов Свой угол",
+  applicationName: "Свой угол Academy",
 };
 
 export const viewport: Viewport = {
