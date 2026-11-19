@@ -3,9 +3,9 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Свой угол — Академия координатора",
+  title: "Свой угол — обучение и тестирование",
   description: "Первичное тестирование и обучение кандидатов Свой угол",
-  applicationName: "Свой угол Academy",
+  applicationName: "Свой угол — обучение и тестирование",
 };
 
 export const viewport: Viewport = {
